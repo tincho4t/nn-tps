@@ -53,6 +53,7 @@ class NN(object):
     def correction(self, Zh):
         E = (Zh-self.Y[self.L -1])
         e = self.norm2(E) # Norma 2 al cuadrado del error
+        self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-1].T,E))) # dw = Learning Rate * (D * Yj-1)
         for j in range(self.L-1, 0, -1): # [L-1, 1]
             #print "------- START CORRECTION j: %d -----" % j
             #print("E: ", E)
