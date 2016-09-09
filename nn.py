@@ -9,7 +9,7 @@ import numpy as np
 ###############################
 class NN(object):
     
-    INITIALIZATION_COEF = 0.1 # Coeficiente para disminuir la inicialización de los pesos
+    INITIALIZATION_COEF = 0.01 # Coeficiente para disminuir la inicialización de los pesos
     
     # layers: Array con las dimensaiones de cada capa incluyendo inputs
     def __init__(self, layers, activationFunction, deltaF, lr):
@@ -18,6 +18,8 @@ class NN(object):
         self.lr = lr # Learning Rate
         self.L = len(layers) # Layers
     
+        ################### BIAS HACK ######################
+        layers[0] += 1 # Agregamos el bias
         ####################### INITIALIZATION ######################
     
         self.Y = list() # Activación de las distintas capas
@@ -51,20 +53,22 @@ class NN(object):
         #return self.Y[L-1] # Devuelvo el output
     
     def correction(self, Zh):
+        # Error y delta de la última capa
         E = (Zh-self.Y[self.L -1])
-        e = self.norm2(E) # Norma 2 al cuadrado del error
-        self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-1].T,E))) # dw = Learning Rate * (D * Yj-1)
-        for j in range(self.L-1, 0, -1): # [L-1, 1]
+        self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-1].T,E))) # dw = Learning Rate * ((Zh-Y[-1]) * Y[-2])
+        
+        e = self.norm2(E) # Calculo la Norma 2 al cuadrado del error para devolverla
+        for j in range(self.L-2, -1, -1): # [L-1, 1]
             #print "------- START CORRECTION j: %d -----" % j
             #print("E: ", E)
-            yDelta = self.deltaF(np.dot(self.Y[j-1], self.W[j-1])) # y' = f'(Yj-1 * Wj)
+            yDelta = self.deltaF(np.dot(self.Y[j], self.W[j])) # y' = f'(Yj * Wj)
             #print("yDelta: ", yDelta)
-            D = np.multiply(E,yDelta) # D = (Dirección de correción * tamaño de paso) = (Dj * Wj) * y'j-1
+            D = np.multiply(E,yDelta) # D = (Dirección de correción * tamaño de paso) = (Dj * Wj) * y'j
             #print("D", D)
-            #print("self.Y[j-1]", self.Y[j-1].T)
-            #print("np.dot(D, self.Y[j-1])", np.dot(self.Y[j-1].T,D))
-            self.dW[j-1] = self.dW[j-1] + (self.lr * (np.dot(self.Y[j-1].T,D))) # dw = Learning Rate * (D * Yj-1)
-            E = np.dot(D, self.W[j-1].T) # Error nuevo = D * Wj^Transpuesta 
+            #print("self.Y[j]", self.Y[j].T)
+            #print("np.dot(D, self.Y[j])", np.dot(self.Y[j].T,D))
+            self.dW[j] = self.dW[j] + (self.lr * (np.dot(self.Y[j].T,D))) # dw = Learning Rate * (D * Yj)
+            E = np.dot(D, self.W[j].T) # Error nuevo = D * Wj^Transpuesta 
         return e    
 
     # def correction(self, Zh):
@@ -78,9 +82,9 @@ class NN(object):
     #     return e
     
     # Norma 2 al cuadrado
-    # TODO: Validar que esto sea efectivamente la norma 2 al cuadrado
     def norm2(self, E):
-        return np.power(np.linalg.norm(E), 2)
+        return E
+        #return np.power(np.linalg.norm(E), 2)
     
     def adaptation(self):
         for j in range(self.L-1):
@@ -93,9 +97,24 @@ class NN(object):
     ###############################
     
     def f_batch(self, X, Z):
+        ones = np.atleast_2d(np.ones(X.shape[0])) #Agregamos el BIAS
+        X = np.concatenate((ones.T, X), axis=1)
         e = 0
         P = X.shape[0]
         for h in range(P):
+            self.activation(X[h])
+            e += self.correction(Z[h])
+        self.adaptation()
+        return e
+
+    def random_batch(self, X, Z):
+        ones = np.atleast_2d(np.ones(X.shape[0])) #Agregamos el BIAS
+        X = np.concatenate((ones.T, X), axis=1)
+        e = 0
+        P = X.shape[0]
+        random_index = list(range(P))
+        np.random.shuffle(random_index)
+        for h in random_index[0:15]:
             self.activation(X[h])
             e += self.correction(Z[h])
         self.adaptation()
