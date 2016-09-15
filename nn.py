@@ -50,11 +50,14 @@ class NN(object):
             #print("activationFunction: ", self.activationFunction(np.dot(self.Y[j-1],self.W[j-1])))
             #print("END ---------------")
             self.Y[j] = self.activationFunction(np.dot(self.Y[j-1],self.W[j-1]))
-        #return self.Y[L-1] # Devuelvo el output
+        return self.Y[self.L-1] # Devuelvo el output
     
     def correction(self, Zh):
         # Error y delta de la última capa
+        #print("Zh: %f Yh %f" % (Zh,self.Y[self.L -1]))
         E = (Zh-self.Y[self.L -1])
+        print("E: ", E)
+        print("self.Y[self.L -1]: ", self.Y[self.L -1])
         self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-1].T,E))) # dw = Learning Rate * ((Zh-Y[-1]) * Y[-2])
         
         e = self.norm2(E) # Calculo la Norma 2 al cuadrado del error para devolverla
@@ -70,6 +73,13 @@ class NN(object):
             self.dW[j] = self.dW[j] + (self.lr * (np.dot(self.Y[j].T,D))) # dw = Learning Rate * (D * Yj)
             E = np.dot(D, self.W[j].T) # Error nuevo = D * Wj^Transpuesta 
         return e    
+
+    def predict(self, Xn):
+        Xn = self.addBias(Xn)
+        Zhat = list()
+        for x in Xn:
+            Zhat.append(self.activation(x))
+        return np.array(Zhat)
 
     # def correction(self, Zh):
     #     E = (Zh-self.Y[self.L -1])
@@ -108,8 +118,7 @@ class NN(object):
         return e
 
     def random_batch(self, X, Z):
-        ones = np.atleast_2d(np.ones(X.shape[0])) #Agregamos el BIAS
-        X = np.concatenate((ones.T, X), axis=1)
+        X = self.addBias(X)
         e = 0
         P = X.shape[0]
         random_index = list(range(P))
@@ -119,6 +128,10 @@ class NN(object):
             e += self.correction(Z[h])
         self.adaptation()
         return e
+
+    def addBias(self, X):
+        ones = np.atleast_2d(np.ones(X.shape[0]))
+        return np.concatenate((ones.T, X), axis=1)
 
 # def incriemental(self, X,Z):
 #     e = 0

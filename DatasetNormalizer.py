@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import cPickle
 from scipy.stats import skew
 import numpy as np
@@ -6,12 +9,17 @@ from numpy import genfromtxt
 class DatasetNormalizer(object):
     
     EJ_1_DTYPE="S5,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8"
-    EJ1_COLUMNS_NAME=['radio', 'textura', 'perimetro', 'area', 'suavidad', 'compacidad', 'concavidad', 'puntos_concavos', 'simetria']
+    EJ_2_DTYPE="f8,f8,f8,f8,f8,f8,f8,f8,f8,f8"
+    EJ1_COLUMNS_NAME=['radio', 'textura', 'perimetro', 'area', 'suavidad', 'compacidad', 'concavidad', 'puntos_concavos', 'simetria', 'desconocido']
+    EJ2_COLUMNS_NAME=['Compacidad Relativa','Área de la Superficie Total','Área de las Paredes','Área del Techo','Altura Total','Orientación','Área de Reflejo Total','Distribución del Área de Reflejo'] #,'Carga de Calefacción',' Carga de Refrigeración']
 
-    def __init__(self, filename):
+    def __init__(self, filename, ej=None):
         super(DatasetNormalizer, self).__init__()
         self.filename = filename
-        self.data = self.loadDatasetEj1()
+        if(ej == "ej1"):
+            self.data = self.loadDatasetEj1()
+        else:
+            self.data = self.loadDatasetEj2()
 
     #TODO: Parece q toma la 1er linea como header
     def loadDatasetEj1(self):
@@ -19,6 +27,17 @@ class DatasetNormalizer(object):
         data = list()
         for row in csv_data:
             row[0] = 1 if row[0] == 'M' else 0
+            r = list()
+            for element in row:
+                r.append(float(element))
+            data.append(np.array(r))
+        return np.array(data)
+    
+    #TODO: Parece q toma la 1er linea como header
+    def loadDatasetEj2(self):
+        csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_2_DTYPE)
+        data = list()
+        for row in csv_data:
             r = list()
             for element in row:
                 r.append(float(element))
