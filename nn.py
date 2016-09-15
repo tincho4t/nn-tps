@@ -56,9 +56,7 @@ class NN(object):
         # Error y delta de la última capa
         #print("Zh: %f Yh %f" % (Zh,self.Y[self.L -1]))
         E = (Zh-self.Y[self.L -1])
-        print("E: ", E)
-        print("self.Y[self.L -1]: ", self.Y[self.L -1])
-        self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-1].T,E))) # dw = Learning Rate * ((Zh-Y[-1]) * Y[-2])
+        self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-2].T,E))) # dw = Learning Rate * ((Zh-Y[-1]) * Y[-2])
         
         e = self.norm2(E) # Calculo la Norma 2 al cuadrado del error para devolverla
         for j in range(self.L-2, -1, -1): # [L-1, 1]
