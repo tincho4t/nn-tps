@@ -91,8 +91,8 @@ class NN(object):
     
     # Norma 2 al cuadrado
     def norm2(self, E):
-        return E
-        #return np.power(np.linalg.norm(E), 2)
+        # return E
+        return np.power(np.linalg.norm(E), 2)
     
     def adaptation(self):
         for j in range(self.L-1):
