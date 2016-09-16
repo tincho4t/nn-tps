@@ -12,9 +12,8 @@ class NN(object):
     INITIALIZATION_COEF = 0.01 # Coeficiente para disminuir la inicialización de los pesos
     
     # layers: Array con las dimensaiones de cada capa incluyendo inputs
-    def __init__(self, layers, activationFunction, deltaF, lr):
-        self.activationFunction = activationFunction # Funcion de activacion
-        self.deltaF = deltaF # Derivara de la funcion de acticacion
+    def __init__(self, layers, activationFunctions, lr):
+        self.activationFunctions = activationFunctions # Funcion de activacion
         self.lr = lr # Learning Rate
         self.L = len(layers) # Layers
     
@@ -35,39 +34,30 @@ class NN(object):
             weights = np.random.rand(originLayerSize, destLayerSize) *  self.INITIALIZATION_COEF
             self.W.append(weights)
             self.dW.append(np.zeros_like(weights))
+
+    # Ejecuta la f[i]
+    def activationFunction(self, i, x):
+        return self.activationFunctions[i][0](x)
+
+    # Ejecuta la  f'[i]
+    def deltaF(self, i, x):
+        return self.activationFunctions[i][1](x)
     
     def activation(self, Xn):
         self.Y[0] = Xn.reshape((1, -1))
         for j in range(1,self.L):
-            #print("---------------")
-            #print("self.Y[j-1]", self.Y[j-1])
-            #print("self.Y[j-1].shape", self.Y[j-1].shape)
-            #print("self.W[j-1]", self.W[j-1])
-            #print("self.W[j-1].shape", self.W[j-1].shape)
-            #print(type(np.dot(self.Y[j-1],self.W[j-1])))
-            #print(np.dot(self.Y[j-1],self.W[j-1]))
-            #print(type(self.activationFunction(np.dot(self.Y[j-1],self.W[j-1]))))
-            #print("activationFunction: ", self.activationFunction(np.dot(self.Y[j-1],self.W[j-1])))
-            #print("END ---------------")
-            self.Y[j] = self.activationFunction(np.dot(self.Y[j-1],self.W[j-1]))
+            self.Y[j] = self.activationFunction(j, np.dot(self.Y[j-1],self.W[j-1]))
         return self.Y[self.L-1] # Devuelvo el output
     
     def correction(self, Zh):
         # Error y delta de la última capa
-        #print("Zh: %f Yh %f" % (Zh,self.Y[self.L -1]))
         E = (Zh-self.Y[self.L -1])
         self.dW[-1] = self.dW[-1] + (self.lr * (np.multiply(self.Y[-2].T,E))) # dw = Learning Rate * ((Zh-Y[-1]) * Y[-2])
         
         e = self.norm2(E) # Calculo la Norma 2 al cuadrado del error para devolverla
         for j in range(self.L-2, -1, -1): # [L-1, 1]
-            #print "------- START CORRECTION j: %d -----" % j
-            #print("E: ", E)
-            yDelta = self.deltaF(np.dot(self.Y[j], self.W[j])) # y' = f'(Yj * Wj)
-            #print("yDelta: ", yDelta)
+            yDelta = self.deltaF(j+1, np.dot(self.Y[j], self.W[j])) # yj' = fj'(Yj-1 * Wj-1)
             D = np.multiply(E,yDelta) # D = (Dirección de correción * tamaño de paso) = (Dj * Wj) * y'j
-            #print("D", D)
-            #print("self.Y[j]", self.Y[j].T)
-            #print("np.dot(D, self.Y[j])", np.dot(self.Y[j].T,D))
             self.dW[j] = self.dW[j] + (self.lr * (np.dot(self.Y[j].T,D))) # dw = Learning Rate * (D * Yj)
             E = np.dot(D, self.W[j].T) # Error nuevo = D * Wj^Transpuesta 
         return e    
@@ -78,16 +68,6 @@ class NN(object):
         for x in Xn:
             Zhat.append(self.activation(x))
         return np.array(Zhat)
-
-    # def correction(self, Zh):
-    #     E = (Zh-self.Y[self.L -1])
-    #     e = self.norm2(E) # Norma 2 al cuadrado del error
-    #     for j in range(self.L-1, 0, -1): # [L-1, 1]
-    #         yDelta = self.deltaF(np.dot(self.Y[j-1], self.W[j-1])) # y' = f'(Yj-1 * Wj)
-    #         D = np.multiply(E,yDelta) # D = (Dirección de correción * tamaño de paso) = (Dj * Wj) * y'j-1
-    #         self.dW[j-1] = self.dW[j-1] + (self.lr * (np.dot(D, self.Y[j-1]))) # dw = Learning Rate * (D * Yj-1)
-    #         E = np.dot(D, self.W[j-1].T) # Error nuevo = D * Wj^Transpuesta 
-    #     return e
     
     # Norma 2 al cuadrado
     def norm2(self, E):

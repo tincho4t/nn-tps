@@ -6,10 +6,18 @@ from DatasetNormalizer import DatasetNormalizer
 from random import randint
 
 def sigmoid(x):
-  return 1 / (1 + np.exp(-x))
+	# print("sigmoid of x:")
+	# print(x)
+	return 1 / (1 + np.exp(-x))
 
 def sigmoidDerivate(x):
 	return sigmoid(x) * (1 - sigmoid(x))
+
+def linear(x):
+	return x
+
+def linearDerivate(x):
+	return np.ones(x.shape)
 
 def andDataset():
 	X = np.array([[0,0],[0,1],[1,0],[1,1]])
@@ -74,7 +82,7 @@ X, Z, layers = ej2()
 
 def trainEj1():
 	X, Z, layers = ej1()
-	nn = NN(layers, sigmoid, sigmoidDerivate, 0.01)
+	nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate)], 0.01)
 	acum = 0
 	interval = 1000
 	for i in range(500000):
@@ -98,7 +106,7 @@ def trainEj2():
 			print "lr: %f, neurons: %d" % (lr, neurons)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			X, Z, layers = ej2(neurons)
-			nn = NN(layers, sigmoid, sigmoidDerivate, lr)
+			nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (linear, linearDerivate)], lr)
 			##
 			acum = 0
 			interval = 1000
