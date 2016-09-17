@@ -56,7 +56,8 @@ class NN(object):
         
         e = self.norm2(E) # Calculo la Norma 2 al cuadrado del error para devolverla
         for j in range(self.L-2, -1, -1): # [L-1, 1]
-            yDelta = self.deltaF(j+1, np.dot(self.Y[j], self.W[j])) # yj' = fj'(Yj-1 * Wj-1)
+            #TODO: VALIDAR EL INDICE Q SE USA EN deltaF
+            yDelta = self.deltaF(j, np.dot(self.Y[j], self.W[j])) # yj' = fj'(Yj-1 * Wj-1)
             D = np.multiply(E,yDelta) # D = (Dirección de correción * tamaño de paso) = (Dj * Wj) * y'j
             self.dW[j] = self.dW[j] + (self.lr * (np.dot(self.Y[j].T,D))) # dw = Learning Rate * (D * Yj)
             E = np.dot(D, self.W[j].T) # Error nuevo = D * Wj^Transpuesta 

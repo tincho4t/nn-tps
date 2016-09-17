@@ -6,12 +6,14 @@ from DatasetNormalizer import DatasetNormalizer
 from random import randint
 
 def sigmoid(x):
-	# print("sigmoid of x:")
-	# print(x)
-	return 1 / (1 + np.exp(-x))
+	return 1 / (1 + np.exp(-np.clip(x,-100, 100))) # Acoto los valores ya que por fuera de estos valores deberia saturar en 0 o 1
 
 def sigmoidDerivate(x):
 	return sigmoid(x) * (1 - sigmoid(x))
+
+# Segun Wikipedia la derivada de sofPlus es sigmoid: https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
+def softPlus(x):
+	return np.log(1 + np.exp(np.clip(x,-100, 100)))
 
 def linear(x):
 	return x
@@ -100,13 +102,15 @@ def compareResults(z, zhat):
 		print("%f - %f ====== %f - %f" %(z[j,0], zhat[j,0], z[j,1], zhat[j,1]))
 
 def trainEj2():
-	for lr in [0.1,0.01,0.001, 0.001, 0.0001]:
-		for neurons in [400, 1000, 5000]:
+	# lr = 0.0001
+	# neurons = 1000
+	for lr in [0.0001, 0.001, 0.0001]:
+		for neurons in [1000, 800, 3000]:
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			print "lr: %f, neurons: %d" % (lr, neurons)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			X, Z, layers = ej2(neurons)
-			nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (linear, linearDerivate)], lr)
+			nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (softPlus, sigmoid)], lr)
 			##
 			acum = 0
 			interval = 1000
