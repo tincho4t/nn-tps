@@ -104,8 +104,8 @@ def compareResults(z, zhat):
 def trainEj2():
 	# lr = 0.0001
 	# neurons = 1000
-	for lr in [0.0001, 0.001, 0.0001]:
-		for neurons in [1000, 800, 3000]:
+	for lr in [0.000001]:
+		for neurons in [25000, 50000]:
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			print "lr: %f, neurons: %d" % (lr, neurons)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -113,15 +113,14 @@ def trainEj2():
 			nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (softPlus, sigmoid)], lr)
 			##
 			acum = 0
-			interval = 1000
-			for i in range(100000):
-				if(i%interval == 1):
-					print(acum/interval)
-					acum = 0
+			interval = 20
+			for i in range(1000):
+				e = nn.mini_batch(X,Z)
+				print("Epoc: %d Error: %f" %(i, e))
+				if(i%interval == 0):
 					Zhat = nn.predict(X[0:10,:])
 					Zt = Z[0:10,:]
 					compareResults(Zt, Zhat[:,0,:])
-				acum += nn.random_batch(X,Z)
 
 #trainEj1()
 

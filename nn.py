@@ -10,6 +10,7 @@ import numpy as np
 class NN(object):
     
     INITIALIZATION_COEF = 0.01 # Coeficiente para disminuir la inicialización de los pesos
+    MINI_BATCH_SIZE = 15 # Cantidad de muestras que se toman por minibach
     
     # layers: Array con las dimensaiones de cada capa incluyendo inputs
     def __init__(self, layers, activationFunctions, lr):
@@ -106,6 +107,26 @@ class NN(object):
             self.activation(X[h])
             e += self.correction(Z[h])
         self.adaptation()
+        return e
+
+    def mini_batch(self, X, Z):
+        X = self.addBias(X)
+        e = 0
+        P = X.shape[0] # Cantidad de Instancias
+        
+        # Mezclo los indices
+        random_index = list(range(P))
+        np.random.shuffle(random_index)
+        
+        i = 0
+        while i < P:
+            index = random_index[i]
+            for j in range(self.MINI_BATCH_SIZE):
+                if i < P: # Valido de no pasarme del limite
+                    self.activation(X[index])
+                    e += self.correction(Z[index])
+                i += 1
+            self.adaptation()
         return e
 
     def addBias(self, X):
