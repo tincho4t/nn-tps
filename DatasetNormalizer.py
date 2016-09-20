@@ -44,7 +44,8 @@ class DatasetNormalizer(object):
             data.append(np.array(r))
         return np.array(data)
     
-    def discretization(self, data, colnames, save_path=None, intervals=[-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 6, 8]):
+    def discretization(self, data, colnames, save_path=None, intervals=[-11,-9,-7, -5, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 6, 8]):
+        intervals = list(np.arange(-15,15,0.5))
         save_dictionary = {}
         save_dictionary["intervals"] = intervals
         m_intervals = len(intervals)
