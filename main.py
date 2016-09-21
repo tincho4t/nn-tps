@@ -19,7 +19,7 @@ Test Ej: 1
 python main.py --problem 1 --mode test --input ./data/tp1_ej1_test.csv --load nn-ej1
 
 Train Ej: 2
-python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --epocs 3000 --save nn-ej2
+python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --epocs 3000 --save nn-ej2 --testProportion 0.1
 
 Test Ej: 2
 python main.py --problem 2 --mode test --input ./data/tp1_ej2_test.csv --load nn-ej2
@@ -38,6 +38,7 @@ parser.add_argument('--save', type=str, help='Ruta donde se guardara la red entr
 parser.add_argument('--layers', metavar='layers', type=int, nargs='+', help='Solo requerido en modo: training. Lista de int con el tamanio de las capas intermedias de la red. Ej: "--layers 2 3" resulta en la red [_,2,3,1] para el problema 1.') # Esto se hace asi ya que al discretizar las variables generamos un numero mayor y no podemos permitir que se parametricen la entrada ni tampoco tiene sentido la salida.
 parser.add_argument('--lr', metavar='lr', type=float, help='Learning Rate')
 parser.add_argument('--epocs', type=int, help='Cantidad de epocs de entrenamiento.')
+parser.add_argument('--testProportion', type=float, help='Aplica a Problema 2 unicamente. Si se setea este parametro entonces se divide el train set en dos partes y se mide el Error Cuadratico Medio')
 
 args = parser.parse_args()
 
@@ -201,9 +202,10 @@ def trainEj1(inputLayers, lr, filenameInput, epocs, saveIn=None):
 	if (saveIn):
 		saveAs(saveIn, nn)
 
-def trainEj2(inputLayers, lr, filenameInput, epocs, saveIn=None):
+def trainEj2(inputLayers, lr, filenameInput, epocs, saveIn=None, testProportion=None):
 	X, Z, layers, activationFunctions = getTrainingParamsEj2(inputLayers, filenameInput, saveIn)
-	X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=0.2)
+	tp = testProportion if testProportion else 0.0
+	X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=tp)
 	Z_train, minTrain, maxTrain = normalize(Z_train)
 	nn = NN(layers, activationFunctions, lr)
 	##
@@ -211,10 +213,8 @@ def trainEj2(inputLayers, lr, filenameInput, epocs, saveIn=None):
 	interval = 20
 	for i in range(epocs):
 		e = nn.mini_batch(X_train,Z_train)
-		if(i%100 == 99):
-			lr /= 1.1
-			print("NEW LR IS: ", lr)
-		if(i%interval == 0):
+		print "Epoc %d error: %f" % (i, e)
+		if(testProportion and i%interval == 0):
 			print("Train RMSE")
 			Zhat = nn.predict(X_train)
 			calcRmseEj2(Z_train, Zhat)
@@ -262,9 +262,9 @@ def testEj2(loadFrom, filenameInput):
 
 if (args.mode == 'training'):
 	if (args.problem == 1):
-		trainEj1(args.layers, args.lr , args.input, args.epocs, args.save)
+		trainEj1(args.layers, args.lr , args.input, args.epocs, saveIn=args.save)
 	elif (args.problem == 2):
-		trainEj2(args.layers, args.lr , args.input, args.epocs, args.save)
+		trainEj2(args.layers, args.lr , args.input, args.epocs, saveIn=args.save, testProportion=args.testProportion)
 elif (args.mode == 'test'):
 	if (args.problem == 1):
 		testEj1(args.load, args.input)
