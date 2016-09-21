@@ -1,10 +1,35 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from __future__ import division
-#from nnb import NNB as NN
 from nn import NN
 import numpy as np
 from DatasetNormalizer import DatasetNormalizer
 from random import randint
-from sklearn import preprocessing
+import cPickle
+import argparse
+
+parser = argparse.ArgumentParser(description='TP 1 de Redes Neuronales')
+parser.add_argument('--problem', metavar='problem', type=int, help='Problema 1 o 2. Valores esperados: 1 o 2')
+parser.add_argument('--mode', metavar='mode', type=str, help='Modo en que se utilizara: "training"/"test"')
+parser.add_argument('--input', type=str, help='File .csv con la informacion que sera utilizada')
+
+# Parametros solo necesarios para el modo: test
+parser.add_argument('--load', metavar='loadFrom', type=str, help='Ruta del dump de la red.')
+
+# Parametros solo necesarios para el modo: train
+parser.add_argument('--save', type=str, help='Ruta donde se guardara la red entrenada.')
+parser.add_argument('--layers', metavar='layers', type=int, nargs='+', help='Solo requerido en modo: training. Lista de int con las capas intermedias de la red. Ej: "--layers 2 3" resulta en la red [_,2,3,1] para el problema 1.') # Esto se hace asi ya que al discretizar las variables generamos un numero mayor y no podemos permitir que se parametricen la entrada ni tampoco tiene sentido la salida.
+parser.add_argument('--lr', metavar='lr', type=float, help='Learning Rate')
+
+
+args = parser.parse_args()
+
+print args
+
+###############################################################################
+######################## ACTIVATION FUNCTIONS #################################
+###############################################################################
 
 def sigmoid(x):
 	return 1 / (1 + np.exp(-np.clip(x,-100, 100))) # Acoto los valores ya que por fuera de estos valores deberia saturar en 0 o 1
@@ -22,6 +47,10 @@ def linear(x):
 def linearDerivate(x):
 	return np.ones(x.shape)
 
+###############################################################################
+###################### DATASETS TRIVIALES DE PRUEBA ###########################
+###############################################################################
+
 def andDataset():
 	X = np.array([[0,0],[0,1],[1,0],[1,1]])
 	Z = np.array([0,0,0,1])
@@ -38,24 +67,10 @@ def xorDataset():
 	layers = list([2,3,1])
 	return (X,Z,layers)
 
-def ej1():
-	dn = DatasetNormalizer('./data/tp1_ej1_training.csv', 'ej1')
-	X = dn.discretization(dn.data[:,1:], dn.EJ1_COLUMNS_NAME, save_path='./ej1.pkl')
-	# X = dn.data[:,1:]
-	Z = dn.data[:,0]
-	# layers = list([X.shape[1],10,10,1])
-	layers = list([X.shape[1],200,1])
-	return (X,Z,layers)
 
-def ej2(hiddenLayer=1000):
-	dn = DatasetNormalizer('./data/tp1_ej2_training.csv', 'ej2')
-	X = dn.discretization(dn.data[:,0:8], dn.EJ2_COLUMNS_NAME, save_path='./ej2.pkl')
-	#X = preprocessing.normalize(dn.data[:,0:8])
-	# X = dn.data[:,1:]
-	Z = dn.data[:,8:]
-	layers = list([X.shape[1],hiddenLayer,2])
-	#layers = list([X.shape[1],200,1])
-	return (X,Z,layers)
+###############################################################################
+########################## CALCULAR PERFORMANCE ###############################
+###############################################################################
 
 def auc(positivePredictions, negativePredictions):
 	repeateTimes = 100 * max(len(positivePredictions),len(negativePredictions))
@@ -75,18 +90,6 @@ def calcAuc(Z, Zhat):
 	negativePredictions = Zhat[Z[0:100]==0]
 	print("Roc area %f " % auc(positivePredictions,negativePredictions))
 
-def splitSet(X, Z, testProportion = 0.2):
-	n = X.shape[0]
-	trainIndex = list(range(n))
-	np.random.shuffle(trainIndex)
-	n_train = int(n*(1-testProportion))
-	X_train = X[trainIndex[0:n_train], :]
-	Z_train = Z[trainIndex[0:n_train]]
-	X_test = X[trainIndex[n_train:], :]
-	Z_test = Z[trainIndex[n_train:]]
-	return(X_train,Z_train,X_test,Z_test)
-
-
 def rmse(Z, Zhat):
 	error = Z - Zhat
 	error*=error
@@ -98,35 +101,113 @@ def calcRmseEj2(Z, Zhat):
 	print("First Column RMSE: ",rmse(Z[:,0], Zhat[:,0, 0]))
 	print("Second Column RMSE: ",rmse(Z[:,1], Zhat[:,0, 1]))
 
-#X, Z, layers = xorDataset()
-
-#X, Z, layers = ej2()
-
-# Ej 1
-# nn = NN(layers, sigmoid, sigmoidDerivate, 0.01)
-
-# Ej 2
-
-def trainEj1():
-	X, Z, layers = ej1()
-	nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate)], 0.01)
-	acum = 0
-	interval = 1000
-	for i in range(500000):
-		if(i%interval == 1):
-			print(acum/interval)
-			acum = 0
-			# EJ 1
-			Zhat = nn.predict(X[0:100,:])
-			calcAuc(Z[0:100], Zhat)
-		acum += nn.random_batch(X,Z)
-
-
 def compareResults(z, zhat):
 	for j in range(10):
 		print("%f - %f ====== %f - %f" %(z[j,0], zhat[j,0], z[j,1], zhat[j,1]))
 
-def trainEj2():
+###############################################################################
+############################ DATASET ADMINISTRATOR ############################
+###############################################################################
+
+def splitSet(X, Z, testProportion = 0.2):
+	n = X.shape[0]
+	trainIndex = list(range(n))
+	np.random.shuffle(trainIndex)
+	n_train = int(n*(1-testProportion))
+	X_train = X[trainIndex[0:n_train], :]
+	Z_train = Z[trainIndex[0:n_train]]
+	X_test = X[trainIndex[n_train:], :]
+	Z_test = Z[trainIndex[n_train:]]
+	return(X_train,Z_train,X_test,Z_test)
+
+# Normaliza vectores y los centra entre 0 y 1. Devuelve los vectorres normalizados y los mínimos y máximos
+def normalize(Z):
+	minTrain = Z.min()
+	maxTrain = Z.max()
+	return ((Z - minTrain)/(maxTrain-minTrain), minTrain, maxTrain)
+
+# Desnormaliza el vector para volverlo a los rangos iniciales
+def denormalize(Z, minTrain, maxTrain):
+	return Zhat*(maxTrain-minTrain)+minTrain
+
+###############################################################################
+################################ DUMPING ######################################
+###############################################################################
+
+def saveAs(saveIn, object):
+	print "Guardando la red en %s" % saveIn
+	with open(saveIn, 'wb') as f:
+		cPickle.dump(save_dictionary, f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+def load(loadFrom):
+	print "Cargando red desde %s" % loadFrom
+	with open(loadFrom, 'rb') as f:
+		return cPickle.load(f)
+
+###############################################################################
+################################ TRAINING #####################################
+###############################################################################
+
+# Devuelve un par de sigmoid y su derivada por cada layer
+def getSigmoidFunctions(size):
+	activationFunctions = list()
+	for i in range(size):
+		activationFunctions.append((sigmoid, sigmoidDerivate))
+	return activationFunctions
+
+def getTrainingParamsEj1(inputLayers, filenameInput):
+	dn = DatasetNormalizer(filenameInput, 'ej1')
+	X = dn.discretization(dn.data[:,1:], dn.EJ1_COLUMNS_NAME, save_path=filenameInput+'-normalizer.pkl')
+	Z = dn.data[:,0]
+	layers = [X.shape[1]] + inputLayers + [1]
+	activationFunctions = getSigmoidFunctions(len(layers))
+	return (X,Z,layers,activationFunctions)
+
+def getTrainingParamsEj2(inputLayers, filenameInput):
+	dn = DatasetNormalizer(filenameInput, 'ej2')
+	X = dn.discretization(dn.data[:,0:8], dn.EJ2_COLUMNS_NAME, save_path=filenameInput+'-normalizer.pkl')
+	Z = dn.data[:,8:]
+	layers = [X.shape[1]] + inputLayers + [2]
+	activationFunctions = getSigmoidFunctions(len(layers))
+	return (X,Z,layers,activationFunctions)
+
+def trainEj1(inputLayers, lr, filenameInput, saveIn=None):
+	X, Z, layers, activationFunctions = getTrainingParamsEj1(inputLayers, filenameInput)
+	nn = NN(layers, activationFunctions, lr)
+	for i in range(5000):
+		e = nn.mini_batch(X,Z)
+		print "Epoc %d error: %f" % (i, e)
+		Zhat = nn.predict(X[0:100,:])
+		calcAuc(Z[0:100], Zhat)
+	if (saveIn):
+		saveAs(saveIn, nn)
+
+def trainEj2(inputLayers, lr, filenameInput, saveIn=None):
+	X, Z, layers, activationFunctions = getTrainingParamsEj2(inputLayers, filenameInput)
+	X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=0.2)
+	Z_train, minTrain, maxTrain = normalize(Z_train)
+	nn = NN(layers, activationFunctions, lr)
+	##
+	acum = 0
+	interval = 20
+	for i in range(2000):
+		e = nn.mini_batch(X_train,Z_train)
+		if(i%100 == 99):
+			lr /= 1.1
+			print("NEW LR IS: ", lr)
+		if(i%interval == 0):
+			print("Train RMSE")
+			Zhat = nn.predict(X_train)
+			calcRmseEj2(Z_train, Zhat)
+			print("Test RMSE")
+			Zhat = nn.predict(X_test)
+			Zhat = denormalize(Zhat, minTrain, maxTrain)
+			calcRmseEj2(Z_test, Zhat)
+	if (saveIn):
+		saveAs(saveIn, (nn, minTrain, maxTrain))
+
+# Lo usamos para probar distinas configuraciones
+def experimentWithEj2():
 	# lr = 0.0001
 	# neurons = 1000
 	for lr in [0.01]:
@@ -134,34 +215,40 @@ def trainEj2():
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			print "lr: %f, neurons: %d" % (lr, neurons)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-			X, Z, layers = ej2(neurons)
-			X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=0.2)
-			minTrain = Z_train.min()
-			maxTrain= Z_train.max()
-			Z_train = (Z_train - minTrain)/(maxTrain-minTrain)
-			#nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (softPlus, sigmoid)], lr)
-			nn = NN(layers, [(sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate), (sigmoid, sigmoidDerivate)], lr)
-			##
-			acum = 0
-			interval = 20
-			for i in range(2000):
-				e = nn.mini_batch(X_train,Z_train)
-				if(i%100 == 99):
-					lr /= 1.1
-					print("NEW LR IS: ", lr)
-				#print("Epoc: %d Error: %f" %(i, e))
-				if(i%interval == 0):
-					#Zhat = nn.predict(X_train[0:10,:])
-					#Zt = Z_train[0:10,:]
-					#compareResults(Zt, Zhat[:,0,:])
-					print("Train RMSE")
-					Zhat = nn.predict(X_train)
-					calcRmseEj2(Z_train, Zhat)
-					print("Test RMSE")
-					Zhat = nn.predict(X_test)
-					Zhat = Zhat*(maxTrain-minTrain)+minTrain
-					calcRmseEj2(Z_test, Zhat)
+			trainEj2([neurons], lr, './data/tp1_ej2_training.csv')
 
-#trainEj1()
+###############################################################################
+################################## TEST #######################################
+###############################################################################
 
-trainEj2()
+def testEj1(loadFrom, filenameInput):
+	nn = load(loadFrom)
+	dn = DatasetNormalizer(filenameInput, 'ej1')
+	X  = dn.apply_discretization(dn.data, dn.EJ1_COLUMNS_NAME, filenameInput+'-normalizer.pkl')
+	Zhat = nn.predict(X)
+	print "Zhat:"
+	print Zhat
+
+def testEj2(loadFrom, filenameInput):
+	nn, minTrain, maxTrain = load(loadFrom)
+	dn = DatasetNormalizer(filenameInput, 'ej2')
+	X  = dn.apply_discretization(dn.data, dn.EJ2_COLUMNS_NAME, filenameInput+'-normalizer.pkl')
+	Zhat = nn.predict(X_test)
+	Zhat = denormalize(Zhat, minTrain, maxTrain)
+	print "Zhat:"
+	print Zhat
+
+
+if (args.mode == 'training'):
+	if (args.problem == 1):
+		trainEj1(args.layers, args.lr , args.input, args.save)
+	elif (args.problem == 2):
+		trainEj2(args.layers, args.lr , args.input, args.save)
+elif (args.mode == 'test'):
+	if (args.problem == 1):
+		testEj1(args.loadFrom, args.input)
+	elif (args.problem == 2):
+		testEj2(args.loadFrom, args.input)
+
+# trainEj1([200], 0.01, './data/tp1_ej1_training.csv')
+# experimentWithEj2()

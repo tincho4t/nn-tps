@@ -97,18 +97,6 @@ class NN(object):
         self.adaptation()
         return e
 
-    def random_batch(self, X, Z):
-        X = self.addBias(X)
-        e = 0
-        P = X.shape[0]
-        random_index = list(range(P))
-        np.random.shuffle(random_index)
-        for h in random_index[0:15]:
-            self.activation(X[h])
-            e += self.correction(Z[h])
-        self.adaptation()
-        return e
-
     def mini_batch(self, X, Z):
         X = self.addBias(X)
         e = 0

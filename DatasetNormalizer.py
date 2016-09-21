@@ -7,26 +7,33 @@ import numpy as np
 from numpy import genfromtxt
 
 class DatasetNormalizer(object):
-    
+    # Training
     EJ_1_DTYPE="S5,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8"
     EJ_2_DTYPE="f8,f8,f8,f8,f8,f8,f8,f8,f8,f8"
     EJ1_COLUMNS_NAME=['radio', 'textura', 'perimetro', 'area', 'suavidad', 'compacidad', 'concavidad', 'puntos_concavos', 'simetria', 'desconocido']
     EJ2_COLUMNS_NAME=['Compacidad Relativa','Área de la Superficie Total','Área de las Paredes','Área del Techo','Altura Total','Orientación','Área de Reflejo Total','Distribución del Área de Reflejo'] #,'Carga de Calefacción',' Carga de Refrigeración']
+    # Test
+    EJ_1_DTYPE_TEST="f8,f8,f8,f8,f8,f8,f8,f8,f8,f8"
+    EJ_2_DTYPE_TEST="f8,f8,f8,f8,f8,f8,f8,f8"
 
-    def __init__(self, filename, ej=None):
+    def __init__(self, filename, ej=None, test=False):
         super(DatasetNormalizer, self).__init__()
         self.filename = filename
         if(ej == "ej1"):
-            self.data = self.loadDatasetEj1()
+            self.data = self.loadDatasetEj1(test)
         else:
-            self.data = self.loadDatasetEj2()
+            self.data = self.loadDatasetEj2(test)
 
     #TODO: Parece q toma la 1er linea como header
-    def loadDatasetEj1(self):
-        csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_1_DTYPE)
+    def loadDatasetEj1(self, test):
+        if (test):
+            csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_1_DTYPE_TEST)
+        else:
+            csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_1_DTYPE)
         data = list()
         for row in csv_data:
-            row[0] = 1 if row[0] == 'M' else 0
+            if(not test): # Si no es test discretizo el resultado
+                row[0] = 1 if row[0] == 'M' else 0
             r = list()
             for element in row:
                 r.append(float(element))
@@ -34,8 +41,11 @@ class DatasetNormalizer(object):
         return np.array(data)
     
     #TODO: Parece q toma la 1er linea como header
-    def loadDatasetEj2(self):
-        csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_2_DTYPE)
+    def loadDatasetEj2(self, test):
+        if (test):
+            csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_2_DTYPE_TEST)
+        else:
+            csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_2_DTYPE)
         data = list()
         for row in csv_data:
             r = list()
