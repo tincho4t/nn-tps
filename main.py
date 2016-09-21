@@ -9,13 +9,29 @@ from random import randint
 import cPickle
 import argparse
 
+"""
+Ejemplos:
+
+Train Ej: 1
+python main.py --problem 1 --mode training --input ./data/tp1_ej1_training.csv --layers 200 --lr 0.01 --save nn-ej1
+
+Test Ej: 1
+python main.py --problem 1 --mode test --input ./data/tp1_ej1_test.csv --load nn-ej1
+
+Train Ej: 2
+python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --save nn-ej2
+
+Test Ej: 2
+python main.py --problem 2 --mode test --input ./data/tp1_ej2_test.csv --load nn-ej2
+"""
+
 parser = argparse.ArgumentParser(description='TP 1 de Redes Neuronales')
 parser.add_argument('--problem', metavar='problem', type=int, help='Problema 1 o 2. Valores esperados: 1 o 2')
 parser.add_argument('--mode', metavar='mode', type=str, help='Modo en que se utilizara: "training"/"test"')
 parser.add_argument('--input', type=str, help='File .csv con la informacion que sera utilizada')
 
 # Parametros solo necesarios para el modo: test
-parser.add_argument('--load', metavar='loadFrom', type=str, help='Ruta del dump de la red.')
+parser.add_argument('--load', type=str, help='Ruta del dump de la red.')
 
 # Parametros solo necesarios para el modo: train
 parser.add_argument('--save', type=str, help='Ruta donde se guardara la red entrenada.')
@@ -128,16 +144,16 @@ def normalize(Z):
 
 # Desnormaliza el vector para volverlo a los rangos iniciales
 def denormalize(Z, minTrain, maxTrain):
-	return Zhat*(maxTrain-minTrain)+minTrain
+	return Z*(maxTrain-minTrain)+minTrain
 
 ###############################################################################
 ################################ DUMPING ######################################
 ###############################################################################
 
-def saveAs(saveIn, object):
+def saveAs(saveIn, obj):
 	print "Guardando la red en %s" % saveIn
 	with open(saveIn, 'wb') as f:
-		cPickle.dump(save_dictionary, f, protocol=cPickle.HIGHEST_PROTOCOL)
+		cPickle.dump(obj, f, protocol=cPickle.HIGHEST_PROTOCOL)
 
 def load(loadFrom):
 	print "Cargando red desde %s" % loadFrom
@@ -155,35 +171,38 @@ def getSigmoidFunctions(size):
 		activationFunctions.append((sigmoid, sigmoidDerivate))
 	return activationFunctions
 
-def getTrainingParamsEj1(inputLayers, filenameInput):
+def getTrainingParamsEj1(inputLayers, filenameInput, saveIn):
+	saveIn = saveIn if saveIn else './' # Si no viene definodo el parametro tomo ./ como default
 	dn = DatasetNormalizer(filenameInput, 'ej1')
-	X = dn.discretization(dn.data[:,1:], dn.EJ1_COLUMNS_NAME, save_path=filenameInput+'-normalizer.pkl')
+	X = dn.discretization(dn.data[:,1:], dn.EJ1_COLUMNS_NAME, save_path=saveIn+'-normalizer.pkl')
 	Z = dn.data[:,0]
 	layers = [X.shape[1]] + inputLayers + [1]
 	activationFunctions = getSigmoidFunctions(len(layers))
 	return (X,Z,layers,activationFunctions)
 
-def getTrainingParamsEj2(inputLayers, filenameInput):
+def getTrainingParamsEj2(inputLayers, filenameInput, saveIn):
+	saveIn = saveIn if saveIn else './' # Si no viene definodo el parametro tomo ./ como default
 	dn = DatasetNormalizer(filenameInput, 'ej2')
-	X = dn.discretization(dn.data[:,0:8], dn.EJ2_COLUMNS_NAME, save_path=filenameInput+'-normalizer.pkl')
+	X = dn.discretization(dn.data[:,0:8], dn.EJ2_COLUMNS_NAME, save_path=saveIn+'-normalizer.pkl')
 	Z = dn.data[:,8:]
 	layers = [X.shape[1]] + inputLayers + [2]
 	activationFunctions = getSigmoidFunctions(len(layers))
 	return (X,Z,layers,activationFunctions)
 
 def trainEj1(inputLayers, lr, filenameInput, saveIn=None):
-	X, Z, layers, activationFunctions = getTrainingParamsEj1(inputLayers, filenameInput)
+	X, Z, layers, activationFunctions = getTrainingParamsEj1(inputLayers, filenameInput, saveIn)
 	nn = NN(layers, activationFunctions, lr)
-	for i in range(5000):
+	for i in range(3000):
 		e = nn.mini_batch(X,Z)
 		print "Epoc %d error: %f" % (i, e)
-		Zhat = nn.predict(X[0:100,:])
-		calcAuc(Z[0:100], Zhat)
+		if (i % 50 == 0):
+			Zhat = nn.predict(X[0:100,:])
+			calcAuc(Z[0:100], Zhat)
 	if (saveIn):
 		saveAs(saveIn, nn)
 
 def trainEj2(inputLayers, lr, filenameInput, saveIn=None):
-	X, Z, layers, activationFunctions = getTrainingParamsEj2(inputLayers, filenameInput)
+	X, Z, layers, activationFunctions = getTrainingParamsEj2(inputLayers, filenameInput, saveIn)
 	X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=0.2)
 	Z_train, minTrain, maxTrain = normalize(Z_train)
 	nn = NN(layers, activationFunctions, lr)
@@ -223,17 +242,17 @@ def experimentWithEj2():
 
 def testEj1(loadFrom, filenameInput):
 	nn = load(loadFrom)
-	dn = DatasetNormalizer(filenameInput, 'ej1')
-	X  = dn.apply_discretization(dn.data, dn.EJ1_COLUMNS_NAME, filenameInput+'-normalizer.pkl')
+	dn = DatasetNormalizer(filenameInput, 'ej1', test=True)
+	X  = dn.apply_discretization(dn.data, dn.EJ1_COLUMNS_NAME, loadFrom+'-normalizer.pkl')
 	Zhat = nn.predict(X)
 	print "Zhat:"
 	print Zhat
 
 def testEj2(loadFrom, filenameInput):
 	nn, minTrain, maxTrain = load(loadFrom)
-	dn = DatasetNormalizer(filenameInput, 'ej2')
-	X  = dn.apply_discretization(dn.data, dn.EJ2_COLUMNS_NAME, filenameInput+'-normalizer.pkl')
-	Zhat = nn.predict(X_test)
+	dn = DatasetNormalizer(filenameInput, 'ej2', test=True)
+	X  = dn.apply_discretization(dn.data, dn.EJ2_COLUMNS_NAME, loadFrom+'-normalizer.pkl')
+	Zhat = nn.predict(X)
 	Zhat = denormalize(Zhat, minTrain, maxTrain)
 	print "Zhat:"
 	print Zhat
@@ -246,9 +265,9 @@ if (args.mode == 'training'):
 		trainEj2(args.layers, args.lr , args.input, args.save)
 elif (args.mode == 'test'):
 	if (args.problem == 1):
-		testEj1(args.loadFrom, args.input)
+		testEj1(args.load, args.input)
 	elif (args.problem == 2):
-		testEj2(args.loadFrom, args.input)
+		testEj2(args.load, args.input)
 
 # trainEj1([200], 0.01, './data/tp1_ej1_training.csv')
 # experimentWithEj2()

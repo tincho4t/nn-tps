@@ -105,5 +105,5 @@ class DatasetNormalizer(object):
             for i in range(1, len(intervals)):
                 new_columns[column_temp >= (mean + intervals[i] * std / 2.0), i] = 1
             new_data_set[:, (col*m_intervals):((col+1)*m_intervals)] = new_columns
-            print("Doing column: "+str(colnames[col])+" to go "+str(data.shape[1]-col)+str(skewness)+" "+str(load_dictionary[colnames[col]]["min"])+" "+str(mean)+" "+str(std))
+            #print("Doing column: "+str(colnames[col])+" to go "+str(data.shape[1]-col)+str(skewness)+" "+str(load_dictionary[colnames[col]]["min"])+" "+str(mean)+" "+str(std))
         return(new_data_set)
