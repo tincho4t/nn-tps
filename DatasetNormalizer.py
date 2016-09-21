@@ -24,7 +24,6 @@ class DatasetNormalizer(object):
         else:
             self.data = self.loadDatasetEj2(test)
 
-    #TODO: Parece q toma la 1er linea como header
     def loadDatasetEj1(self, test):
         if (test):
             csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_1_DTYPE_TEST)
@@ -40,7 +39,6 @@ class DatasetNormalizer(object):
             data.append(np.array(r))
         return np.array(data)
     
-    #TODO: Parece q toma la 1er linea como header
     def loadDatasetEj2(self, test):
         if (test):
             csv_data = genfromtxt(self.filename, delimiter=',', dtype=self.EJ_2_DTYPE_TEST)

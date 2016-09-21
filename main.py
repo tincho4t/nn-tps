@@ -13,13 +13,13 @@ import argparse
 Ejemplos:
 
 Train Ej: 1
-python main.py --problem 1 --mode training --input ./data/tp1_ej1_training.csv --layers 200 --lr 0.01 --save nn-ej1
+python main.py --problem 1 --mode training --input ./data/tp1_ej1_training.csv --layers 200 --lr 0.01 --epocs 3000 --save asd
 
 Test Ej: 1
 python main.py --problem 1 --mode test --input ./data/tp1_ej1_test.csv --load nn-ej1
 
 Train Ej: 2
-python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --save nn-ej2
+python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --epocs 3000 --save nn-ej2
 
 Test Ej: 2
 python main.py --problem 2 --mode test --input ./data/tp1_ej2_test.csv --load nn-ej2
@@ -35,9 +35,9 @@ parser.add_argument('--load', type=str, help='Ruta del dump de la red.')
 
 # Parametros solo necesarios para el modo: train
 parser.add_argument('--save', type=str, help='Ruta donde se guardara la red entrenada.')
-parser.add_argument('--layers', metavar='layers', type=int, nargs='+', help='Solo requerido en modo: training. Lista de int con las capas intermedias de la red. Ej: "--layers 2 3" resulta en la red [_,2,3,1] para el problema 1.') # Esto se hace asi ya que al discretizar las variables generamos un numero mayor y no podemos permitir que se parametricen la entrada ni tampoco tiene sentido la salida.
+parser.add_argument('--layers', metavar='layers', type=int, nargs='+', help='Solo requerido en modo: training. Lista de int con el tamanio de las capas intermedias de la red. Ej: "--layers 2 3" resulta en la red [_,2,3,1] para el problema 1.') # Esto se hace asi ya que al discretizar las variables generamos un numero mayor y no podemos permitir que se parametricen la entrada ni tampoco tiene sentido la salida.
 parser.add_argument('--lr', metavar='lr', type=float, help='Learning Rate')
-
+parser.add_argument('--epocs', type=int, help='Cantidad de epocs de entrenamiento.')
 
 args = parser.parse_args()
 
@@ -98,9 +98,9 @@ def auc(positivePredictions, negativePredictions):
 	return(acum/repeateTimes)
 
 def calcAuc(Z, Zhat):
-	print("positivePredictions", Zhat[Z[0:10]==1])
-	print("negativePredictions", Zhat[Z[0:10]==0])
-	# print("Zhat[0:10]", Zhat[0:10])
+	# print("positivePredictions", Zhat[Z[0:10]==1])
+	# print("negativePredictions", Zhat[Z[0:10]==0])
+	# # print("Zhat[0:10]", Zhat[0:10])
 	# print("Z[0:10]", Z[0:10])
 	positivePredictions = Zhat[Z[0:100]==1]
 	negativePredictions = Zhat[Z[0:100]==0]
@@ -189,10 +189,10 @@ def getTrainingParamsEj2(inputLayers, filenameInput, saveIn):
 	activationFunctions = getSigmoidFunctions(len(layers))
 	return (X,Z,layers,activationFunctions)
 
-def trainEj1(inputLayers, lr, filenameInput, saveIn=None):
+def trainEj1(inputLayers, lr, filenameInput, epocs, saveIn=None):
 	X, Z, layers, activationFunctions = getTrainingParamsEj1(inputLayers, filenameInput, saveIn)
 	nn = NN(layers, activationFunctions, lr)
-	for i in range(3000):
+	for i in range(epocs):
 		e = nn.mini_batch(X,Z)
 		print "Epoc %d error: %f" % (i, e)
 		if (i % 50 == 0):
@@ -201,7 +201,7 @@ def trainEj1(inputLayers, lr, filenameInput, saveIn=None):
 	if (saveIn):
 		saveAs(saveIn, nn)
 
-def trainEj2(inputLayers, lr, filenameInput, saveIn=None):
+def trainEj2(inputLayers, lr, filenameInput, epocs, saveIn=None):
 	X, Z, layers, activationFunctions = getTrainingParamsEj2(inputLayers, filenameInput, saveIn)
 	X_train, Z_train, X_test, Z_test = splitSet(X, Z, testProportion=0.2)
 	Z_train, minTrain, maxTrain = normalize(Z_train)
@@ -209,7 +209,7 @@ def trainEj2(inputLayers, lr, filenameInput, saveIn=None):
 	##
 	acum = 0
 	interval = 20
-	for i in range(2000):
+	for i in range(epocs):
 		e = nn.mini_batch(X_train,Z_train)
 		if(i%100 == 99):
 			lr /= 1.1
@@ -234,7 +234,7 @@ def experimentWithEj2():
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 			print "lr: %f, neurons: %d" % (lr, neurons)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-			trainEj2([neurons], lr, './data/tp1_ej2_training.csv')
+			trainEj2([neurons], lr, 2000, './data/tp1_ej2_training.csv')
 
 ###############################################################################
 ################################## TEST #######################################
@@ -245,8 +245,9 @@ def testEj1(loadFrom, filenameInput):
 	dn = DatasetNormalizer(filenameInput, 'ej1', test=True)
 	X  = dn.apply_discretization(dn.data, dn.EJ1_COLUMNS_NAME, loadFrom+'-normalizer.pkl')
 	Zhat = nn.predict(X)
-	print "Zhat:"
-	print Zhat
+	print "Predictions:"
+	for z in Zhat:
+		print "%f" % z[0][0]
 
 def testEj2(loadFrom, filenameInput):
 	nn, minTrain, maxTrain = load(loadFrom)
@@ -254,20 +255,21 @@ def testEj2(loadFrom, filenameInput):
 	X  = dn.apply_discretization(dn.data, dn.EJ2_COLUMNS_NAME, loadFrom+'-normalizer.pkl')
 	Zhat = nn.predict(X)
 	Zhat = denormalize(Zhat, minTrain, maxTrain)
-	print "Zhat:"
-	print Zhat
+	print "Predictions:"
+	for z in Zhat:
+		print "%f, %f" % (z[0][0],z[0][1])
 
 
 if (args.mode == 'training'):
 	if (args.problem == 1):
-		trainEj1(args.layers, args.lr , args.input, args.save)
+		trainEj1(args.layers, args.lr , args.input, args.epocs, args.save)
 	elif (args.problem == 2):
-		trainEj2(args.layers, args.lr , args.input, args.save)
+		trainEj2(args.layers, args.lr , args.input, args.epocs, args.save)
 elif (args.mode == 'test'):
 	if (args.problem == 1):
 		testEj1(args.load, args.input)
 	elif (args.problem == 2):
 		testEj2(args.load, args.input)
 
-# trainEj1([200], 0.01, './data/tp1_ej1_training.csv')
+# trainEj1([200], 0.01, 5000, './data/tp1_ej1_training.csv')
 # experimentWithEj2()
