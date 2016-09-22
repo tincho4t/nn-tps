@@ -13,13 +13,13 @@ import argparse
 Ejemplos:
 
 Train Ej: 1
-python main.py --problem 1 --mode training --input ./data/tp1_ej1_training.csv --layers 200 --lr 0.01 --epocs 3000 --save asd
+python main.py --problem 1 --mode training --input ./data/tp1_ej1_training.csv --layers 20 --lr 0.01 --epocs 5000 --save nn-ej1
 
 Test Ej: 1
 python main.py --problem 1 --mode test --input ./data/tp1_ej1_test.csv --load nn-ej1
 
 Train Ej: 2
-python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 500 --lr 0.01 --epocs 3000 --save nn-ej2 --testProportion 0.1
+python main.py --problem 2 --mode training --input ./data/tp1_ej2_training.csv --layers 20 --lr 0.01 --epocs 5000 --save nn-ej2 --testProportion 0.1
 
 Test Ej: 2
 python main.py --problem 2 --mode test --input ./data/tp1_ej2_test.csv --load nn-ej2
