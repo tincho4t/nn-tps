@@ -10,7 +10,7 @@ import numpy as np
 class NN_HEBBIANO(object):
     
     MINI_BATCH_SIZE = 15 # Cantidad de muestras que se toman por minibach
-    INITIALIZATION_COEF = 0.01 # Coeficiente para disminuir la inicialización de los pesos
+    INITIALIZATION_COEF = 0.001 # Coeficiente para disminuir la inicialización de los pesos
     
     # layers: Array con las dimensaiones de cada capa incluyendo inputs
     def __init__(self, inputSize, outputSize, lr, method):
@@ -33,18 +33,27 @@ class NN_HEBBIANO(object):
         Y = np.dot(X,self.W)
         return Y
 
-    def correction(self, X, Y):
-        print X.shape
-        print Y.shape
-        print self.getXhat(Y).shape
-        dW = self.lr * np.dot((X - self.getXhat(Y)).T, Y) # lr * (X - X^) * Y
-        return dW
+    # def correction(self, X, Y):
+    #     xhat = self.getXhat(Y)
+    #     X_ = np.tile(X.T,(1,self.M))
+    #     xDif = (X_ - xhat)
+    #     dW = self.lr * np.dot(xDif, Y.T) # lr * (X - X^) * Y
+    #     return dW
 
     def getXhat(self, Y):
-        print ">>>>>>>>>>>>>>>>>>>>>>getXhat"
-        print (Y.T * self.U).shape
         return np.dot(self.W, Y.T * self.U) # W * (Y^T * U)
     
+    def correction(self, X, Y):
+        dW = np.zeros_like(self.W)
+        for j in range(self.M):
+            # xhat = 0
+            for i in range(self.N):
+                xhat = 0
+                for k in range(j+1): # Sanger
+                    xhat += Y[0,k] * self.W[i,k]
+                dW[i,j] = self.lr * (X[0,i] - xhat) * Y[0,j]
+        return dW
+
     def adaptation(self, dW):
         self.W += dW
     
@@ -70,9 +79,9 @@ class NN_HEBBIANO(object):
                 if i < P: # Valido de no pasarme del limite
                     x[:] = X[index].T
                     Y = self.activation(x)
-                    dW += self.correction(x,Y)
+                    dW = self.correction(x,Y)
+                    self.adaptation(dW)
                 i += 1
-            self.adaptation(dW)
 
     # Definimos error como la suma de los productos internos dos a dos de W
     def getError(self):
