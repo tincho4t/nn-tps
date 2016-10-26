@@ -39,12 +39,27 @@ def trainEj1(outputShape, filenameInput, epocs, lr, method, saveIn=None):
 	nn = NN_HEBBIANO(inputShape, outputShape, lr, method)
 	for i in range(epocs):
 		nn.mini_batch(X)
-		print "Epoc %d, error: %f" % (i, nn.getError())
+		print "Epoc %d, error: %f, silhouette score %f" % (i, nn.getError(), nn.getSilhouette(X, Z))
 		# Y = nn.activation(X[0])
 		# print Y
 	if (saveIn):
 		saveAs(saveIn, nn)
 	return nn
+
+def validationScorePerEpoc(filenameInput, lr, epocs, method):
+	X, Z, inputShape = getTrainingParamsEj1(filenameInput)
+	index = np.arange(len(Z))
+	np.random.shuffle(index)
+	train_to = int(0.7*len(index))
+	train_index = index[0:train_to]
+	test_index = index[train_to:]
+	X_train = X[train_index,:]
+	X_test = X[test_index,:]
+	Z_test = Z[test_index]
+	nn = NN_HEBBIANO(inputShape, 3, lr, method)
+	for i in range(epocs):
+		nn.mini_batch(X_train)
+		print "Epoc %d, error: %f, silhouette score %f" % (i, nn.getError(), nn.getSilhouette(X_test, Z_test))
 
 def keepTraining(nn, epocs):
 	for i in range(epocs):
@@ -86,8 +101,6 @@ def drawScatterPlot(matrix):
     ax.set_zlabel('Z Label')
     plt.show()
 
-drawScatterPlot(dp)
-
 def buildPlotDataset(nn, filename):
 	X, Z, inputShape = getTrainingParamsEj1(filename)
 	Y = nn.predict(X)
@@ -101,5 +114,8 @@ def buildPlotDataset(nn, filename):
 
 filename = '../data/tp2_training_dataset.csv'
 outputShape = 3
-nn = trainEj1(outputShape, filename, 3000, 0.001, 'sanger')
+nn = trainEj1(outputShape, filename, 10, 0.001, 'sanger')
 
+for lr in [0.01,0.001,0.0001]:
+	print "DOING LR",lr
+	validationScorePerEpoc(filename, lr, 100, 'sanger')
