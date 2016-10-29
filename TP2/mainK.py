@@ -9,7 +9,7 @@ from numpy import genfromtxt
 from random import randint
 import cPickle
 import argparse
-
+import sklearn.metrics as metrics
 
 # parser = argparse.ArgumentParser(description='TP 1 de Redes Neuronales')
 # parser.add_argument('--problem', metavar='problem', type=int, help='Problema 1 o 2. Valores esperados: 1 o 2')
@@ -239,19 +239,144 @@ def testEj2(loadFrom, filenameInput):
 # trainEj1([200], 0.01, 5000, './data/tp1_ej1_training.csv')
 # experimentWithEj2()
 
-def heatMap(nn, filename, matrixDimension, category = None):
-	X, Z, _ = getTrainingParamsEj1(filename)
-	xPositions = nn.predict(X)
+def getMatrixForClass(matrixDimension, xPositions, category):
 	M = np.zeros(matrixDimension)
 	for i in range(len(xPositions)):
 		p = xPositions[i]
 		if((category == None ) or (category == Z[i])):
 			M[p] += 1
+	return M
+
+def heatMap(nn, filename, matrixDimension, category = None):
+	X, Z, _ = getTrainingParamsEj1(filename)
+	xPositions = nn.predict(X)
+	M = getMatrixForClass(matrixDimension, xPositions, category)
 	print M
 	plt.imshow(M/np.max(M), cmap='hot', interpolation='nearest')
 	plt.show()
 
+def createEvaluateVari2ables(matrixDimension, filenameInput, lr, s0, sr, saveIn=None):
+	X, Z, inputShape = getTrainingParamsEj1(filenameInput)
+	nn = NN_KOHONEM(inputShape, matrixDimension, lr, s0, sr)
+	return nn,X,Z
+
+# def evaluate(nn, X,Z):
+# 	xPositions = nn.predict(X)
+# 	return metrics.silhouette_score(xPositions, Z)
+
+def trainAndEval(nn, X, Z, epocs, initialEpoc = 0):
+	for i in range(epocs):
+		nn.mini_batch(X)
+	return evaluate(nn, X,Z)
+
+############ Metrica Distancia a Centroides ############
+import math
+
+# Devuelve el indice del mayor indice
+def getMaxIndex(M):
+	maxIndex = (0,0)
+	for i in range(M.shape[0]):
+		for j in range(M.shape[1]):
+			if(M[maxIndex] < M[(i,j)]):
+				maxIndex = (i,j)
+	return maxIndex
+
+def calculateCentroid(xPositions, z, matrixDimension):
+	M = getMatrixForClass(matrixDimension, xPositions, z)
+	return getMaxIndex(M)
+
+def calculateCentroids(xPositions, Z, matrixDimension):
+	centroids = {}
+	for z in Z:
+		centroids[z] = calculateCentroid(xPositions, z, matrixDimension)
+	return centroids
+
+def distanceBetween(x,y):
+	return math.hypot(x[0] - y[0], x[1] - y[1])
+
+def getNearestCentroids(p,centroids):
+	distancesToC = {}
+	for z in centroids:
+		c = centroids[z]
+		distancesToC[z] = distanceBetween(c,p)
+	cFirst = min(distancesToC, key=distancesToC.get)
+	del distancesToC[cFirst] # Saco el maximo y busco el siguiente
+	cSecond = min(distancesToC, key=distancesToC.get)
+	return centroids[cFirst],centroids[cSecond]
+
+# Return un mapa Z, ([Distancia al Centroide],[Distancia al proximo centroide mas cercano])
+# solamente con las instancias que su centroide mas cercano es el correcto
+def getDistancesOfCentroids(xPositions, centroids, Z):
+	distances = {}
+	for z in np.unique(Z):
+		distances[z] = ([],[])
+	for i in range(len(xPositions)):
+		p = xPositions[i]
+		z = Z[i]
+		cFirst, cSecond = getNearestCentroids(p,centroids)
+		if(cFirst == centroids[z]): # Si el punto tiene como centroide mas cercano el suyo
+			distances[z][0].append(distanceBetween(p,cFirst)) # Agrego la distancia a su centroide
+			distances[z][1].append(distanceBetween(p,cSecond)) # Agrego la distancia al proximo
+	return distances
+
+def sumInstancesOf(Z,z):
+	return np.sum(Z == z)
+
+# Mira la diferencia de distancia entre las intancias
+def getError(nn, xPositions, Z, centroids):
+	distances = getDistancesOfCentroids(xPositions, centroids, Z)
+	errors = []
+	for z in np.unique(Z):
+		okClasificated = len(distances[z][0])
+		total = sumInstancesOf(Z,z)
+		print "Centroide %d -> Total %f --- ok: %d total: %d Diff: %f" % (z, (okClasificated/total) - (np.sum(distances[z][0])/ np.sum(distances[z][1])), okClasificated, total, (np.sum(distances[z][0])/ np.sum(distances[z][1])))
+		error = (okClasificated/total) - (np.sum(distances[z][0])/ np.sum(distances[z][1]))
+		errors.append(error)
+	return errors
+
+def getScore(nn, xPositions, Z, centroids):
+	distances = getDistancesOfCentroids(xPositions, centroids, Z)
+	scores = []
+	acu = []
+	d = []
+	for z in np.unique(Z):
+		okClasificated = len(distances[z][0])
+		total = sumInstancesOf(Z,z)
+		##########
+		#Lo hago asi porque ya tengo codeadas las funciones
+		_, nearestCentroid = getNearestCentroids(centroids[z],centroids) # Como el 1ro voy a ser yo mismo tomo el 2do
+		print centroids[z], nearestCentroid, distanceBetween(centroids[z], nearestCentroid)
+		distanceToNearestCentroid = distanceBetween(centroids[z], nearestCentroid) / math.hypot(nn.M1,nn.M2)
+		#########
+		score = (okClasificated/total) + distanceToNearestCentroid
+		# print "Centroide %d -> Total %f --- Acu: %f(%d/%d) Distance: %f" % (z, score, okClasificated/total,okClasificated, total, distanceToNearestCentroid)
+		scores.append(score)
+		acu.append(okClasificated/total)
+		d.append(distanceToNearestCentroid)
+	zAmount = len(np.unique(Z))
+	return (np.average(scores), np.average(acu), np.average(d))
+
+def evaluate(nn, X, Z):
+	xPositions = nn.predict(X)
+	centroids = calculateCentroids(xPositions, Z, (nn.M1,nn.M2))
+	errors = getError(nn, xPositions, Z, centroids)
+	# return np.sum(errors)
+	return getScore(nn, xPositions, Z, centroids), np.sum(errors)
+
+#################################################################
+
 filename = '../data/tp2_training_dataset.csv'
 matrixDimension = (10,10)
-nn = trainEj1(matrixDimension, filename, 3000, 0.01, 1, 10)
 
+nn,X,Z = createEvaluateVari2ables(matrixDimension, filename, 0.0001, 5, 20)
+
+acum = 0
+# for epocs in [50,50]:
+# for i in range(100):
+for i in range(200):
+	epocs = 1
+	score = trainAndEval(nn, X, Z, epocs, acum)
+	acum += epocs
+	print "Epocs: %d Score %f Acu: %f Distance: %f Error %f " %(acum, score[0][0],score[0][1],score[0][2],score[1])
+
+print "(%d,%d) Epocs: %d LR: %f, s0: %f sr: %f" %(matrixDimension[0],matrixDimension[1],acum, nn.lr,nn.sigma0,nn.sigmar)

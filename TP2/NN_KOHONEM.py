@@ -67,7 +67,7 @@ class NN_KOHONEM(object):
     def newEpoc(self):
         self.t += 1
         self.sigma = self.getSigma()
-        print "new sigma %f" % self.sigma
+        # print "new sigma %f" % self.sigma
 
     def getSigma(self):
         return self.sigma0 * np.exp(-self.t /self.sigmar)
