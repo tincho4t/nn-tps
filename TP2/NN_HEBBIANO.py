@@ -3,6 +3,7 @@
 
 from __future__ import division
 import numpy as np
+from sklearn import metrics
 
 
 class NN_HEBBIANO(object):
@@ -96,7 +97,7 @@ class NN_HEBBIANO(object):
             error += np.sum(np.dot(v.T,w))
         return error
 
-    def getSilhouette(self, X, Z):
+    def getSilhouette1(self, X, Z):
         Y = self.predict(X)
         index_dict = {}
         classes = np.unique(Z)
@@ -122,3 +123,7 @@ class NN_HEBBIANO(object):
         for other_point in other_points:
             acum += np.linalg.norm(point-other_point)
         return acum/len(other_points)
+
+    def getSilhouette(self, X, Z):
+        Y = self.predict(X)
+        return metrics.silhouette_score(Y, Z)
