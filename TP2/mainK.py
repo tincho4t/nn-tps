@@ -167,7 +167,7 @@ def getNearestCentroids(p,centroids):
 	cFirst = min(distancesToC, key=distancesToC.get)
 	del distancesToC[cFirst] # Saco el maximo y busco el siguiente
 	cSecond = min(distancesToC, key=distancesToC.get)
-	return centroids[cFirst],centroids[cSecond]
+	return cFirst,cSecond
 
 # Return un mapa Z, ([Distancia al Centroide],[Distancia al proximo centroide mas cercano])
 # solamente con las instancias que su centroide mas cercano es el correcto
@@ -179,9 +179,9 @@ def getDistancesOfCentroids(xPositions, centroids, Z):
 		p = xPositions[i]
 		z = Z[i]
 		cFirst, cSecond = getNearestCentroids(p,centroids)
-		if(cFirst == centroids[z]): # Si el punto tiene como centroide mas cercano el suyo
-			distances[z][0].append(distanceBetween(p,cFirst)) # Agrego la distancia a su centroide
-			distances[z][1].append(distanceBetween(p,cSecond)) # Agrego la distancia al proximo
+		if(cFirst == z): # Si el punto tiene como centroide mas cercano el suyo
+			distances[z][0].append(distanceBetween(p,centroids[cFirst])) # Agrego la distancia a su centroide
+			distances[z][1].append(distanceBetween(p,centroids[cSecond])) # Agrego la distancia al proximo
 	return distances
 
 def sumInstancesOf(Z,z):
@@ -189,13 +189,12 @@ def sumInstancesOf(Z,z):
 
 def getAcu(distances, z, Z):
 	okClasificated = len(distances[z][0])
-	total = sumInstancesOf(Z,z)
-	return okClasificated/total
+	return okClasificated
 
 def getDistanceToNearestCentroid(nn, centroids, z):
 	#Lo hago asi porque ya tengo codeadas las funciones
 	_, nearestCentroid = getNearestCentroids(centroids[z],centroids) # Como el 1ro voy a ser yo mismo tomo el 2do
-	return distanceBetween(centroids[z], nearestCentroid) / math.hypot(nn.M1,nn.M2)
+	return distanceBetween(centroids[z], centroids[nearestCentroid]) / math.hypot(nn.M1,nn.M2)
 
 def getScore(nn, x_trainPositions, Z_train, x_testPositions, Z_test, centroids):
 	distances_train = getDistancesOfCentroids(x_trainPositions, centroids, Z_train)
@@ -211,12 +210,13 @@ def getScore(nn, x_trainPositions, Z_train, x_testPositions, Z_test, centroids):
 		acus_train.append(acu_train)
 		acus_test.append(acu_test)
 		d.append(distanceToNearestCentroid)
-	return (np.average(acus_train), np.average(acus_test), np.average(d))
+	return (np.sum(acus_train)/len(Z_train), np.sum(acus_test)/len(Z_test), np.average(d))
 
 def evaluate(nn, X_train, Z_train, X_test, Z_test):
 	x_trainPositions = nn.predict(X_train)
 	x_testPositions = nn.predict(X_test)
 	centroids = calculateCentroids(x_trainPositions, Z_train, (nn.M1,nn.M2))
+	print centroids
 	return getScore(nn, x_trainPositions, Z_train, x_testPositions, Z_test, centroids)
 
 #################################################################
@@ -232,15 +232,17 @@ elif (args.mode == 'test'):
 filename = '../data/tp2_training_dataset.csv'
 matrixDimension = (10,10)
 
-nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.0001, 1, 10, tp=0.2)
+nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.01, 1, 10, tp=0.2)
 
 acum = 0
 # for epocs in [50,50]:
 # for i in range(100):
-for i in range(1500):
+for i in range(35):
 	epocs = 1
 	acu_train, acu_test, distances = trainAndEval(nn, X_train, Z_train, X_test, Z_test, epocs, acum)
 	acum += epocs
 	print "Epocs: %d Score %f Acu Train: %f Acu Test: %f Distances %f " %(acum, acu_test + distances,acu_train, acu_test, distances)
 
 print "(%d,%d) Epocs: %d LR: %f, s0: %f sr: %f" %(matrixDimension[0],matrixDimension[1],acum, nn.lr,nn.sigma0,nn.sigmar)
+
+#heatMap(nn, filename, matrixDimension, category = None)
