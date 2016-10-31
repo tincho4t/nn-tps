@@ -11,6 +11,9 @@ import argparse
 import math
 # from random import randint
 
+# python mainK.py --mode training --input ../data/tp2_training_dataset.csv --save ../data/kohonem.pck --lr 0.001 --s0 1 --sr 10 --m1 5 --m2 5 --testProportion 0.2 --epocs 40
+# python mainK.py --mode test --input ../data/tp2_test_dataset.csv --load ../data/kohonem.pck
+
 parser = argparse.ArgumentParser(description='TP 2 de Redes Neuronales Kohonem')
 parser.add_argument('--mode', metavar='mode', type=str, help='Modo en que se utilizara: "training"/"test"')
 parser.add_argument('--input', type=str, help='File .csv con la informacion que sera utilizada')
@@ -39,7 +42,7 @@ args = parser.parse_args()
 def splitSet(X, Z, testProportion = 0.2):
 	n = X.shape[0]
 	trainIndex = list(range(n))
-	np.random.shuffle(trainIndex)
+	np.random.RandomState(0).shuffle(trainIndex)
 	n_train = int(n*(1-testProportion))
 	X_train = X[trainIndex[0:n_train], :]
 	Z_train = Z[trainIndex[0:n_train]]
@@ -88,9 +91,8 @@ def train(matrixDimension, filenameInput, epocs, lr, s0, sr, saveIn=None):
 	for i in range(epocs):
 		nn.mini_batch(X)
 		print "Epoc %d" % i
-		if (i % 25 == 0):
-			xPositions = nn.predict(X)
-			showMatrix(xPositions, matrixDimension)
+	xPositions = nn.predict(X)
+	showMatrix(xPositions, matrixDimension)
 	if (saveIn):
 		saveAs(saveIn, nn)
 	return nn
@@ -102,11 +104,11 @@ def train(matrixDimension, filenameInput, epocs, lr, s0, sr, saveIn=None):
 
 def test(loadFrom, filenameInput):
 	nn = load(loadFrom)
-	X  = genfromtxt(filename, delimiter=',')
-	Zhat = nn.predict(X)
+	X  = genfromtxt(filenameInput, delimiter=',')
+	xPositions = nn.predict(X)
 	print "Predictions:"
-	for z in Zhat:
-		print "%f" % z[0][0]
+	for p in xPositions:
+		print p
 
 def getMatrixForClass(matrixDimension, xPositions, category, Z):
 	M = np.zeros(matrixDimension)
@@ -216,33 +218,33 @@ def evaluate(nn, X_train, Z_train, X_test, Z_test):
 	x_trainPositions = nn.predict(X_train)
 	x_testPositions = nn.predict(X_test)
 	centroids = calculateCentroids(x_trainPositions, Z_train, (nn.M1,nn.M2))
-	print centroids
+	# print centroids
 	return getScore(nn, x_trainPositions, Z_train, x_testPositions, Z_test, centroids)
 
 #################################################################
 
 
 if (args.mode == 'training'):
-	matrixDimension = (args.M1,args.M2)
+	matrixDimension = (args.m1,args.m2)
 	train(matrixDimension, args.input, args.epocs, args.lr, args.s0, args.sr, saveIn=args.save)
 elif (args.mode == 'test'):
 	test(args.load, args.input)
 
 
-filename = '../data/tp2_training_dataset.csv'
-matrixDimension = (10,10)
+# filename = '../data/tp2_training_dataset.csv'
+# matrixDimension = (10,10)
 
-nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.01, 1, 10, tp=0.2)
+# nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.01, 1, 10, tp=0.2)
 
-acum = 0
-# for epocs in [50,50]:
+# acum = 0
+# # for epocs in [50,50]:
+# # for i in range(100):
 # for i in range(100):
-for i in range(35):
-	epocs = 1
-	acu_train, acu_test, distances = trainAndEval(nn, X_train, Z_train, X_test, Z_test, epocs, acum)
-	acum += epocs
-	print "Epocs: %d Score %f Acu Train: %f Acu Test: %f Distances %f " %(acum, acu_test + distances,acu_train, acu_test, distances)
+# 	epocs = 1
+# 	acu_train, acu_test, distances = trainAndEval(nn, X_train, Z_train, X_test, Z_test, epocs, acum)
+# 	acum += epocs
+# 	print "Epocs: %d Score %f Acu Train: %f Acu Test: %f Distances %f " %(acum, acu_test + distances,acu_train, acu_test, distances)
 
-print "(%d,%d) Epocs: %d LR: %f, s0: %f sr: %f" %(matrixDimension[0],matrixDimension[1],acum, nn.lr,nn.sigma0,nn.sigmar)
+# print "(%d,%d) Epocs: %d LR: %f, s0: %f sr: %f" %(matrixDimension[0],matrixDimension[1],acum, nn.lr,nn.sigma0,nn.sigmar)
 
-#heatMap(nn, filename, matrixDimension, category = None)
+# #heatMap(nn, filename, matrixDimension, category = None)
