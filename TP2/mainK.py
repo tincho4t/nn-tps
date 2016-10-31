@@ -237,7 +237,7 @@ nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, f
 acum = 0
 # for epocs in [50,50]:
 # for i in range(100):
-for i in range(200):
+for i in range(1500):
 	epocs = 1
 	acu_train, acu_test, distances = trainAndEval(nn, X_train, Z_train, X_test, Z_test, epocs, acum)
 	acum += epocs
