@@ -58,7 +58,7 @@ class NN_KOHONEM(object):
 
     # Traduce posicion en array concatenado a posicion en matriz
     def p(self,j):
-        return (j//self.M1,j%self.M1)
+        return (j//self.M2,j%self.M2)
 
     # Norma 2 al cuadrado
     def norm2(self, E):

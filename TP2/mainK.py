@@ -84,15 +84,14 @@ def showMatrix(xPositions, matrixDimension):
 	# plt.imshow(M/np.max(M), cmap='hot', interpolation='nearest')
 	# plt.show()
 
-def train(matrixDimension, filenameInput, epocs, lr, s0, sr, saveIn=None):
-	X, Z, inputShape = getTrainingParamsEj1(filenameInput)
-	
-	nn = NN_KOHONEM(inputShape, matrixDimension, lr, s0, sr)
+def train(matrixDimension, filenameInput, epocs, lr, s0, sr, testProportion, saveIn=None):
+	nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filenameInput, lr, s0, sr, tp=testProportion)
 	for i in range(epocs):
-		nn.mini_batch(X)
-		print "Epoc %d" % i
-	xPositions = nn.predict(X)
-	showMatrix(xPositions, matrixDimension)
+		acu_train, acu_test, distances = trainAndEval(nn, X_train, Z_train, X_test, Z_test, i, 0)
+		print "Epocs: %d Score %f Acu Train: %f Acu Test: %f Distances %f " %(i, acu_test + distances,acu_train, acu_test, distances)
+# 	acum += epocs
+	# xPositions = nn.predict(X)
+	# showMatrix(xPositions, matrixDimension)
 	if (saveIn):
 		saveAs(saveIn, nn)
 	return nn
@@ -118,12 +117,34 @@ def getMatrixForClass(matrixDimension, xPositions, category, Z):
 			M[p] += 1
 	return M
 
+def getWinnerClass(point, matrixes):
+	winner = 1
+	for z in matrixes:
+		if(matrixes[z][point] > matrixes[winner][point]):
+			winner = z
+	return winner
+
+def classDistributionMap(nn, filename, matrixDimension):
+	X, Z, _ = getTrainingParamsEj1(filename)
+	xPositions = nn.predict(X)
+	matrixes = {}
+	for z in np.unique(Z):
+		M = getMatrixForClass(matrixDimension, xPositions, z, Z)
+		matrixes[z] = M
+	classDistributionMatrix = np.zeros(matrixDimension)
+	for i in range(matrixDimension[0]):
+		for j in range(matrixDimension[1]):
+			classDistributionMatrix[i,j] = getWinnerClass((i,j), matrixes)
+	print classDistributionMatrix
+	plt.pcolor(classDistributionMatrix)
+	plt.show()
+
 def heatMap(nn, filename, matrixDimension, category = None):
 	X, Z, _ = getTrainingParamsEj1(filename)
 	xPositions = nn.predict(X)
 	M = getMatrixForClass(matrixDimension, xPositions, category, Z)
 	print M
-	plt.imshow(M/np.max(M), cmap='hot', interpolation='nearest')
+	plt.imshow(M/np.max(M), cmap='hot', interpolation='nearest', origin='lower')
 	plt.show()
 
 def createEvaluateVariables(matrixDimension, filenameInput, lr, s0, sr, tp=0.2):
@@ -226,7 +247,7 @@ def evaluate(nn, X_train, Z_train, X_test, Z_test):
 
 if (args.mode == 'training'):
 	matrixDimension = (args.m1,args.m2)
-	train(matrixDimension, args.input, args.epocs, args.lr, args.s0, args.sr, saveIn=args.save)
+	train(matrixDimension, args.input, args.epocs, args.lr, args.s0, args.sr, args.testProportion, saveIn=args.save)
 elif (args.mode == 'test'):
 	test(args.load, args.input)
 
@@ -234,7 +255,7 @@ elif (args.mode == 'test'):
 # filename = '../data/tp2_training_dataset.csv'
 # matrixDimension = (10,10)
 
-# nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.01, 1, 10, tp=0.2)
+# nn,X_train, Z_train, X_test, Z_test = createEvaluateVariables(matrixDimension, filename, 0.001, 1, 5000, tp=0.2)
 
 # acum = 0
 # # for epocs in [50,50]:
